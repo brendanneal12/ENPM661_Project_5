@@ -210,7 +210,7 @@ def WSColoring(Workspace, Location, Color):
 
 ##------------------------Defining my GetInitialState Function-----------------------##
 def GetInitialState():
-    print("Enter Initial Node X, Y, and Theta separated by spaces: ")
+    print("Enter Initial Node X and Y, separated by spaces: ")
     Init_State=[int(x) for x in input().split()]
     return Init_State
 
@@ -243,7 +243,7 @@ WheelDistance = 35.4 #cm
 
 ##----------------------Arena Setup-------------------##
 
-arena = np.zeros((200, 600, 3), dtype = "uint8")
+arena = np.zeros((400, 500, 3), dtype = "uint8")
 InitState = GetInitialState()
 GoalState =GetGoalState()
 DesClearance = GetClearance()
@@ -259,7 +259,7 @@ if not checkValid(GoalState[0], GoalState[1], RobotRadius, DesClearance):
     print("Your goal state is inside an obstacle or outside the workspace. Please retry.")
     exit()
 
-setup(RobotRadius, DesClearance) #Arena Setup
+setup(DesClearance, RobotRadius) #Arena Setup
 
 
 WSColoring(arena, InitState, (0,255,0)) #Plot Initial State
