@@ -203,12 +203,19 @@ class Node:
     
     def ReturnParent(self):
         return self.parent
+    
+    def ReturnParentState(self): #Returns the Parent Node's State
+        if self.ReturnParent() is None:
+            return None
+        return self.ReturnParent().ReturnState()
 
 
 def GenerateRandomPoint():
     rand_x = random.randint(1,500)
     rand_y = random.randint(1,400)
     Point = [rand_x, rand_y]
+
+    return Point
 
 def FindNearestTreePoint(NodeList, RandomPoint):
     min_dist = math.inf
@@ -228,8 +235,8 @@ def FindNearestState(NewStateList, RandomPoint):
         dist = np.sqrt((RandomPoint[0]-state[0])**2 + (RandomPoint[1]-state[1])**2)
         if dist < min_dist:
             min_dist = dist
-            closest_state = state
             closest_state_idx = idx
+            closest_state = state
 
     return closest_state, closest_state_idx
 
@@ -301,7 +308,7 @@ def GenerateBranch(Closest_Node, RandomPoint, Closest_Idx, Wheel_RPMS, RobotRadi
     ActionStateList = [sub_array[0] for sub_array in ActionStateInfo]
     Closest_State, Closest_Idx = FindNearestState(ActionStateList, RandomPoint)
     Full_Info = ActionStateInfo[Closest_Idx]
-    
+
     return Closest_State, Full_Info
 
 '''For Curves'''
@@ -333,11 +340,12 @@ def PlotBranch(ParentNodeState, WheelAction, WheelRad, WheelDist, Color, RobotRa
             plt.plot([X_Start, New_Node_X], [Y_Start, New_Node_Y], color = Color, linewidth = 0.75)
 
 
-
-
-
-
-
+def CompareToGoal(Current_Node_Position, Goal_Node_Position, ErrorThreshold):
+    Dist2Goal = (Goal_Node_Position[0] - Current_Node_Position[0])**2 + (Goal_Node_Position[1] - Current_Node_Position[1])**2 #Euclidian Distance
+    if Dist2Goal < ErrorThreshold**2: #Error less than threshold PLUS the angle has to be equal
+        return True
+    else:
+        return False
 
 
 
@@ -386,6 +394,9 @@ WheelRadius = 3.8 #cm
 RobotRadius = 17.8 #cm
 WheelDistance = 35.4 #cm
 
+##---------------------Thresholds---------------------##
+ErrorThresh = 3
+
 ##----------------------Arena Setup-------------------##
 
 arena = np.zeros((400, 500, 3), dtype = "uint8")
@@ -412,3 +423,28 @@ WSColoring(arena, GoalState, (0,255,0)) #Plot Goal State
 
 plt.imshow(arena, origin='lower') #Show Initial Arena Setup
 plt.show()
+
+
+Check_Goal = False
+Init_Node_Temp = Node(InitState, None)
+Init_Node = Node(InitState, Init_Node_Temp)
+
+Explored_Tree = []
+Explored_Tree.append(Init_Node)
+
+iteration = 0
+
+while not Check_Goal:
+    Rand_Point = GenerateRandomPoint()
+    Tree_Idx, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Rand_Point)
+    Closest_Action_State, Info = GenerateBranch(NearestTreeNode, Rand_Point, Tree_Idx, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance)
+    NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_Idx])
+    PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
+    Explored_Tree.append(NewBranch)
+    Check_Goal = CompareToGoal(NewBranch.ReturnState(), GoalState, ErrorThresh)
+    iteration += 1
+
+plt.imshow(arena, origin= 'lower')
+plt.show()
+
+
