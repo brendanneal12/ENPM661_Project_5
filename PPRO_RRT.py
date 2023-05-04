@@ -8,6 +8,7 @@ import timeit
 import sys
 import math
 from matplotlib import pyplot as plt
+import random
 ##=====================================================Map Setup=============================================================##
 def setup(s, r):
 
@@ -186,12 +187,156 @@ def checkValid(x, y, s, r):
     if checkClearance(x, y, s, r):
         return False
     
-    if (x < 0 or x >= 600 or y < 0 or y >= 250):
+    if (x < 0 or x >= 500 or y < 0 or y >= 400):
         return False
     
     return True
 
-##===========================================Function Definitions====================================================##
+##=====================================Function and Class Definitions====================================================##
+class Node:
+    def __init__(self, state, parent):
+        self.state = state
+        self.parent = parent
+
+    def ReturnState(self):
+        return self.state
+    
+    def ReturnParent(self):
+        return self.parent
+
+
+def GenerateRandomPoint():
+    rand_x = random.randint(1,500)
+    rand_y = random.randint(1,400)
+    Point = [rand_x, rand_y]
+
+def FindNearestTreePoint(NodeList, RandomPoint):
+    min_dist = math.inf
+    for idx, node in enumerate(NodeList):
+        NodeState = node.ReturnState()
+        dist = np.sqrt((RandomPoint[0]-NodeState[0])**2 + (RandomPoint[1]-NodeState[1])**2)
+        if dist < min_dist:
+            min_dist = dist
+            closest_node_idx = idx
+            closest_node = node
+
+    return closest_node_idx, closest_node
+
+def FindNearestState(NewStateList, RandomPoint):
+    min_dist = math.inf
+    for idx, state in enumerate(NewStateList):
+        dist = np.sqrt((RandomPoint[0]-state[0])**2 + (RandomPoint[1]-state[1])**2)
+        if dist < min_dist:
+            min_dist = dist
+            closest_state = state
+            closest_state_idx = idx
+
+    return closest_state, closest_state_idx
+
+##---------------------------------Defining my Action Set -----------------------------------------##
+''' Though this project is not necessarily action based planning, I need to limit the graph generation based
+off of differential drive constraints. Thus, I reuse this from the previous project.'''
+
+def ReturnPossibleStates(CurrentNodeState, Wheel_RPMS, RobotRadius, ObsClearance, WheelRad, WheelDist):
+    RPM1 = Wheel_RPMS[0]
+    RPM2 = Wheel_RPMS[1]
+    ActionSet = [[RPM1, RPM1], [RPM2,RPM2],[RPM1, RPM2], [RPM2, RPM1], [0,RPM1], [RPM1,0], [0,RPM2], [RPM2,0]] #Differential Drive Action Set
+    NewNodeStates = [] #Init List of States
+
+    for action in ActionSet: #For each differential drive action
+        NewNodeState, Cost = CalcMoveWithCost(CurrentNodeState, action, RobotRadius, ObsClearance, WheelRad, WheelDist) #Calculate the state and cost
+        if NewNodeState is not None:
+            NewNodeStates.append([NewNodeState, Cost, action]) #Append Chile Node States
+    return NewNodeStates
+
+##---------------------------------Defining my Cost and NewNodeState Function--------------------------------------##
+''' Though this project is not necessarily action based planning, I need to limit the graph generation based
+off of differential drive constraints. Thus, I reuse this from the previous project.'''
+
+def CalcMoveWithCost(CurrentNodeState, WheelAction, RobotRadius, ObsClearance, WheelRad, WheelDist):
+    t = 0 
+    dt = 0.1 
+    Curr_Node_X = CurrentNodeState[0] #Grab Current Node X
+    Curr_Node_Y = CurrentNodeState[1] #Grad Current Node Y
+    Curr_Node_Theta = np.deg2rad(CurrentNodeState[2]) #Grab Current Node Theta, convert to radians.
+
+    MoveCost = 0.0 #Init Cost
+
+    New_Node_X = Curr_Node_X #Set New Node Start Point X
+    New_Node_Y = Curr_Node_Y #Set New Node Start Point Y
+    New_Node_Theta = Curr_Node_Theta #Set New Node Start Point Theta
+
+    ##----------------Euler Integration to Generate Curvature----------------##
+    while t < 1:
+        t += dt
+        ChangeX = 0.5*WheelRad*(WheelAction[0]+WheelAction[1])*np.cos(New_Node_Theta)*dt
+        ChangeY = 0.5*WheelRad*(WheelAction[0]+WheelAction[1])*np.sin(New_Node_Theta)*dt
+        ChangeTheta = (WheelRad/WheelDist)*(WheelAction[0]-WheelAction[1])*dt
+        
+        New_Node_X += ChangeX
+        New_Node_Y += ChangeY
+        New_Node_Theta += ChangeTheta
+
+        MoveCost += np.sqrt((ChangeX)**2 + (ChangeY)**2)
+
+        ##-----------Why CheckValid is inside the loop---------------##
+        '''Inside the loop because if we only checked final, the intermediate steps would sometimes be in the obstacle space.'''
+        if checkValid(New_Node_X, New_Node_Y, ObsClearance, RobotRadius) == False:
+            return None, None
+        
+    New_Node_Theta = int(np.rad2deg(New_Node_Theta)) #Convert back to Degrees
+
+    ##-----Wrap to -360-360-----##
+    if New_Node_Theta >= 360:
+        New_Node_Theta = New_Node_Theta - 360
+    if New_Node_Theta < -360:
+        New_Node_Theta = New_Node_Theta + 360
+
+    return [New_Node_X, New_Node_Y, New_Node_Theta], MoveCost
+
+
+## Generate Based off of DiffDrive Curve
+def GenerateBranch(Closest_Node, RandomPoint, Closest_Idx, Wheel_RPMS, RobotRadius, ObsClearance, WheelRad, WheelDist):
+    ActionStateInfo = ReturnPossibleStates(Closest_Node.ReturnState(), Wheel_RPMS, RobotRadius, ObsClearance, WheelRad, WheelDist)
+    ActionStateList = [sub_array[0] for sub_array in ActionStateInfo]
+    Closest_State, Closest_Idx = FindNearestState(ActionStateList, RandomPoint)
+    Full_Info = ActionStateInfo[Closest_Idx]
+    
+    return Closest_State, Full_Info
+
+'''For Curves'''
+#Relatively the same function as the cost and state function, but with modifications to just plot.
+#Plots Curve from Parent to New State
+def PlotBranch(ParentNodeState, WheelAction, WheelRad, WheelDist, Color, RobotRadius, ObsClearance):
+    t = 0
+    dt = 0.1
+    Curr_Node_X = ParentNodeState[0]
+    Curr_Node_Y = ParentNodeState[1]
+    Curr_Node_Theta = np.deg2rad(ParentNodeState[2])
+
+    New_Node_X = Curr_Node_X
+    New_Node_Y = Curr_Node_Y
+    New_Node_Theta = Curr_Node_Theta
+
+    while t < 1:
+        t += dt
+        X_Start = New_Node_X
+        Y_Start = New_Node_Y
+        ChangeX = 0.5*WheelRad*(WheelAction[0]+WheelAction[1])*np.cos(New_Node_Theta)*dt
+        ChangeY = 0.5*WheelRad*(WheelAction[0]+WheelAction[1])*np.sin(New_Node_Theta)*dt
+        ChangeTheta = (WheelRad/WheelDist)*(WheelAction[0]-WheelAction[1])*dt
+
+        New_Node_X += ChangeX
+        New_Node_Y += ChangeY
+        New_Node_Theta += ChangeTheta
+        if checkValid(New_Node_X, New_Node_Y, ObsClearance, RobotRadius) == True:
+            plt.plot([X_Start, New_Node_X], [Y_Start, New_Node_Y], color = Color, linewidth = 0.75)
+
+
+
+
+
+
 
 
 
@@ -210,7 +355,7 @@ def WSColoring(Workspace, Location, Color):
 
 ##------------------------Defining my GetInitialState Function-----------------------##
 def GetInitialState():
-    print("Enter Initial Node X and Y, separated by spaces: ")
+    print("Enter Initial Node X and Y, and Theta, separated by spaces: ")
     Init_State=[int(x) for x in input().split()]
     return Init_State
 
