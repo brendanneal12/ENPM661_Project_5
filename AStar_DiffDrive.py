@@ -453,8 +453,8 @@ plt.imshow(arena, origin='lower') #Show Initial Arena Setup
 plt.show()
 
 #Initialize Arena and Thresholds
-SizeArenaX = 600
-SizeArenaY = 200
+SizeArenaX = 500
+SizeArenaY = 400
 ThreshXY = 0.5
 ThreshTheta = 30
 ThreshGoalState = 3

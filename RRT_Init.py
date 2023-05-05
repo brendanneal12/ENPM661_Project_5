@@ -307,10 +307,12 @@ def GenerateBranch(Closest_Node, RandomPoint, Closest_Idx, Wheel_RPMS, RobotRadi
     ActionStateInfo = ReturnPossibleStates(Closest_Node.ReturnState(), Wheel_RPMS, RobotRadius, ObsClearance, WheelRad, WheelDist)
     ActionStateList = [sub_array[0] for sub_array in ActionStateInfo]
     print("\nPossible Action States:\n", ActionStateList)
-    Closest_State, Closest_Idx = FindNearestState(ActionStateList, RandomPoint)
-    Full_Info = ActionStateInfo[Closest_Idx]
-
-    return Closest_State, Full_Info
+    if ActionStateList:
+        Closest_State, Closest_Idx = FindNearestState(ActionStateList, RandomPoint)
+        Full_Info = ActionStateInfo[Closest_Idx]
+        return Closest_State, Full_Info
+    else:
+        return False, False
 
 '''For Curves'''
 #Relatively the same function as the cost and state function, but with modifications to just plot.
@@ -441,12 +443,15 @@ while not Check_Goal:
     Tree_Idx, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Rand_Point)
     print("\nRandom Point:", Rand_Point, "Nearest Tree State:", NearestTreeNode.ReturnState())
     Closest_Action_State, Info = GenerateBranch(NearestTreeNode, Rand_Point, Tree_Idx, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance)
-    NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_Idx])
-    print("\nNewest Branch State:", NewBranch.ReturnState())
-    PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
-    Explored_Tree.append(NewBranch)
-    Check_Goal = CompareToGoal(NewBranch.ReturnState(), GoalState, ErrorThresh)
-    iteration += 1
+    if not Closest_Action_State:
+        continue
+    else:
+        NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_Idx])
+        print("\nNewest Branch State:", NewBranch.ReturnState())
+        PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
+        Explored_Tree.append(NewBranch)
+        Check_Goal = CompareToGoal(NewBranch.ReturnState(), GoalState, ErrorThresh)
+        iteration += 1
 
     if iteration > 20:
         print("Iteration Limit Reached!")
