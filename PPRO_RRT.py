@@ -1,5 +1,5 @@
 #Brendan Neal and Adam Lobo
-#ENPM661 Project 5 -- Implementation of RRT Algorithm in 2D
+#ENPM661 Project 5 -- Implementation of PPRO RRT Algorithm in 2D
 
 ##======================Importing Libraries=============================##
 import cv2 as cv
@@ -443,7 +443,8 @@ random_point_list.append([0,0])
 iteration = 0
 
 starttime = timeit.default_timer() #Start the Timer when serch starts
-print("RRT Starting!!!!")
+print("PPRO RRT Starting!!!!")
+
 while not Check_Goal:
     Rand_Point = GenerateRandomPoint()
     random_point_list.append(Rand_Point)
@@ -465,6 +466,7 @@ while not Check_Goal:
     if iteration > MaxIterations:
         print("Iteration Limit Reached!")
         break
+
 
 stoptime = timeit.default_timer() #Stop the Timer, as Searching is complete.
 print("That took", stoptime - starttime, "seconds to complete")
