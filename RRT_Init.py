@@ -25,7 +25,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkClearance(x, y, s, r):
-                arena[y, x] = darkGray
+                arena[399 - y, x] = darkGray
     
     #Draw Obstacle Borders
     for x in range(0, 500):
@@ -33,7 +33,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkBorder(x, y, s):
-                arena[y, x] = gray
+                arena[399 - y, x] = gray
     
     #Draw Obstacles
     for x in range(0, 500):
@@ -41,21 +41,21 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkObstacle(x, y):
-                arena[y, x] = white
+                arena[399 - y, x] = white
                 
 #Checks to see if a point is within an obstacle
 def checkObstacle(x, y):
     
     #Left Squares
-    if x >= 50 and x < 150:
+    if x >= 50 and x < 125:
         
-        if (y >= 50 and y < 150) or (y >= 250 and y < 350):
+        if (y >= 50 and y < 125) or (y >= 275 and y < 350):
             return True
     
     #Right Squares
-    if x >= 350 and x < 450:
+    if x >= 375 and x < 450:
         
-        if (y >= 50 and y < 150) or (y >= 250 and y < 350):
+        if (y >= 50 and y < 125) or (y >= 275 and y < 350):
             return True
         
     #Left M Rectangle
@@ -94,15 +94,15 @@ def checkBorder(x, y, s):
     slopeHeight = int(round(s/math.cos(math.radians(64.29))))
     
     #Left Squares
-    if x >= 50 - s and x < 150 + s:
+    if x >= 50 - s and x < 125 + s:
         
-        if (y >= 50 - s and y < 150 + s) or (y >= 250 - s and y < 350 + s):
+        if (y >= 50 - s and y < 125 + s) or (y >= 275 - s and y < 350 + s):
             return True
     
     #Right Squares
-    if x >= 350 - s and x < 450 + s:
+    if x >= 375 - s and x < 450 + s:
         
-        if (y >= 50 - s and y < 150 + s) or (y >= 250 - s and y < 350 + s):
+        if (y >= 50 - s and y < 125 + s) or (y >= 275 - s and y < 350 + s):
             return True
         
     #Left M Rectangle
@@ -140,15 +140,15 @@ def checkClearance(x, y, s, r):
     slopeHeight = int(round((s + rr)/math.cos(math.radians(64.29))))
     
     #Left Squares
-    if x >= 50 - s - rr and x < 150 + s + rr:
+    if x >= 50 - s - rr and x < 125 + s + rr:
         
-        if (y >= 50 - s - rr and y < 150 + s + rr) or (y >= 250 - s - rr and y < 350 + s + rr):
+        if (y >= 50 - s - rr and y < 125 + s + rr) or (y >= 275 - s - rr and y < 350 + s + rr):
             return True
     
     #Right Squares
-    if x >= 350 - s - rr and x < 450 + s + rr:
+    if x >= 375 - s - rr and x < 450 + s + rr:
         
-        if (y >= 50 - s - rr and y < 150 + s + rr) or (y >= 250 - s - rr and y < 350 + s + rr):
+        if (y >= 50 - s - rr and y < 125 + s + rr) or (y >= 275 - s - rr and y < 350 + s + rr):
             return True
         
     #Left M Rectangle
@@ -178,13 +178,13 @@ def checkClearance(x, y, s, r):
 #Checks to see if a point is valid (by checking obstacle, border, and clearance, as well as making sure the point is within arena bounds)
 def checkValid(x, y, s, r):
     
-    if checkObstacle(x, y):
+    if checkObstacle(x, 399 - y):
         return False
     
-    if checkBorder(x, y, s):
+    if checkBorder(x, 399 - y, s):
         return False
     
-    if checkClearance(x, y, s, r):
+    if checkClearance(x, 399 - y, s, r):
         return False
     
     if (x < 0 or x >= 500 or y < 0 or y >= 400):
@@ -396,6 +396,7 @@ def GetWheelRPM():
 WheelRadius = 3.8 #cm
 RobotRadius = 17.8 #cm
 WheelDistance = 35.4 #cm
+MaxIterations = 1000
 
 ##---------------------Thresholds---------------------##
 ErrorThresh = 3
@@ -432,13 +433,18 @@ Check_Goal = False
 Init_Node_Temp = Node(InitState, None)
 Init_Node = Node(InitState, Init_Node_Temp)
 
+Wheel_CMD_List = []
 Explored_Tree = []
+random_point_list = []
 Explored_Tree.append(Init_Node)
+Wheel_CMD_List.append([0,0])
+random_point_list.append([0,0])
 
 iteration = 0
 
 while not Check_Goal:
     Rand_Point = GenerateRandomPoint()
+    random_point_list.append(Rand_Point)
     WSColoring(arena, Rand_Point, (255,0,0)) #Plot Initial State
     Tree_Idx, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Rand_Point)
     print("\nRandom Point:", Rand_Point, "Nearest Tree State:", NearestTreeNode.ReturnState())
@@ -450,14 +456,33 @@ while not Check_Goal:
         print("\nNewest Branch State:", NewBranch.ReturnState())
         PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
         Explored_Tree.append(NewBranch)
+        Wheel_CMD_List.append(Info[2])
         Check_Goal = CompareToGoal(NewBranch.ReturnState(), GoalState, ErrorThresh)
         iteration += 1
 
-    if iteration > 20:
+    if iteration > MaxIterations:
         print("Iteration Limit Reached!")
         break
 
 plt.imshow(arena, origin= 'lower')
 plt.show()
+
+
+print("Visualization Starting!")
+plt.plot(InitState[0], InitState[1], 'go', markersize = 0.5) #plot init state
+plt.imshow(arena, origin = 'lower')
+
+for idx, node in enumerate(Explored_Tree): #Plots the search area
+    curr_node_state = node.ReturnState()
+    parent_node_state = node.ReturnParentState()
+    plt.plot(random_point_list[idx][0], random_point_list[idx][1], 'y+')
+    plt.pause(1)
+
+
+    PlotBranch(node.ReturnParentState(), Wheel_CMD_List[idx], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
+    plt.pause(1)
+    
+plt.show()
+plt.close()
 
 
