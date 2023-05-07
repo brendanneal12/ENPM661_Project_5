@@ -217,13 +217,16 @@ def GenerateRandomPoint():
 
     return Point
 
-def GenerateRandomPoints(CentX, CentY, R):
+def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
     RandPoints = []
-    for i in range(8):
+    while len(RandPoints) < 5:
         angle = random.uniform(0, math.pi)
         X = CentX + R*math.cos(angle)
         Y = CentY + R*math.sin(angle)
-        RandPoints.append([int(X),int(Y)])
+        if checkValid(X, Y, RobotRadius, DesClearance):
+            RandPoints.append([int(X),int(Y)])
+        else:
+            continue
 
     return RandPoints
 
@@ -489,35 +492,38 @@ starttime = timeit.default_timer() #Start the Timer when serch starts
 print("PPRO RRT Starting!!!!")
 Nearest2Goal = Init_Node
 
-while not Check_Goal:
+while iteration < MaxIterations:
     print("The Nearest State to Goal is:", Nearest2Goal.ReturnState())
-    RandomPoints = GenerateRandomPoints(Nearest2Goal.ReturnState()[0], Nearest2Goal.ReturnState()[1], PPRO_Radius)
+    RandomPoints = GenerateRandomPoints(Nearest2Goal.ReturnState()[0], Nearest2Goal.ReturnState()[1], PPRO_Radius, RobotRadius, DesClearance)
     Nearest_Rando_2_Goal, Rando_IDX = FindNearest2Goal(RandomPoints, GoalState)
     Tree_IDX, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Nearest_Rando_2_Goal)
     Closest_Action_State, Info = GenerateBranch(Nearest2Goal, Nearest_Rando_2_Goal, Tree_IDX, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance)
 
-    if not Closest_Action_State:
-        continue
-    else:
+    if Closest_Action_State:
         NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_IDX])
         #print("\nNewest Branch State:", NewBranch.ReturnState())
-        PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
+        #PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
         Explored_Tree.append(NewBranch)
         Wheel_CMD_List.append(Info[2])
         random_point_list.append(Nearest_Rando_2_Goal)
 
         Nearest2GoalSTATE, _ = FindNearestTree2Goal(Explored_Tree, GoalState)
 
-        #if EuclidDist(Nearest2GoalSTATE, GoalState) < EuclidDist(Nearest2Goal.ReturnState(),GoalState):
+        #if (EuclidDist(Nearest2GoalSTATE, GoalState) < EuclidDist(Nearest2Goal.ReturnState(),GoalState)):
         Nearest2Goal = Node(Nearest2GoalSTATE, Explored_Tree[Tree_IDX])
 
-        Check_Goal = CompareToGoal(NewBranch.ReturnState(), GoalState, ErrorThresh)
+        Check_Goal = CompareToGoal(Nearest2Goal.ReturnState(), GoalState, ErrorThresh)
+        if Check_Goal:
+            print("Goal Reached!")
+            break
+    
         iteration += 1
+        print(iteration)
 
-
-    if iteration > MaxIterations:
-        print("Iteration Limit Reached!")
-        break
+    else:
+        iteration +=1
+        print(iteration)
+        continue
 
 
 stoptime = timeit.default_timer() #Stop the Timer, as Searching is complete.
