@@ -217,6 +217,16 @@ def GenerateRandomPoint():
 
     return Point
 
+def GenerateRandomPoints(CentX, CentY, R):
+    RandPoints = []
+    for i in range(8):
+        angle = random.uniform(0, math.pi)
+        X = CentX + R*math.cos(angle)
+        Y = CentY + R*math.sin(angle)
+        RandPoints.append([int(X),int(Y)])
+
+    return RandPoints
+
 def FindNearestTreePoint(NodeList, RandomPoint):
     min_dist = math.inf
     for idx, node in enumerate(NodeList):
@@ -240,8 +250,36 @@ def FindNearestState(NewStateList, RandomPoint):
 
     return closest_state, closest_state_idx
 
+def FindNearest2Goal(Tree, GoalPoint):
+    min_dist = math.inf
+    for idx, state in enumerate(Tree):
+        dist = np.sqrt((GoalPoint[0]-state[0])**2 + (GoalPoint[1]-state[1])**2)
+        if dist < min_dist:
+            min_dist = dist
+            closest_state_2_goal_idx = idx
+            closest_state_2_goal = state
+
+    return closest_state_2_goal, closest_state_2_goal_idx
+
+def FindNearestTree2Goal(Tree, GoalPoint):
+    min_dist = math.inf
+    for idx, node in enumerate(Tree):
+        state = node.ReturnState()
+        dist = np.sqrt((GoalPoint[0]-state[0])**2 + (GoalPoint[1]-state[1])**2)
+        if dist < min_dist:
+            min_dist = dist
+            closest_state_2_goal_idx = idx
+            closest_state_2_goal = state
+
+    return closest_state_2_goal, closest_state_2_goal_idx
+
+def EuclidDist(State1,GoalState):
+    dist = np.sqrt((State1[0]-GoalState[1])**2 + (State1[1] - GoalState[1])**2)
+    return dist
+
+
 ##---------------------------------Defining my Action Set -----------------------------------------##
-''' Though this project is not necessarily action based planning, I need to limit the graph generation based
+''' Though this project is NOT action based planning, I need to limit the graph generation based
 off of differential drive constraints. Thus, I reuse this from the previous project.'''
 
 def ReturnPossibleStates(CurrentNodeState, Wheel_RPMS, RobotRadius, ObsClearance, WheelRad, WheelDist):
@@ -257,7 +295,7 @@ def ReturnPossibleStates(CurrentNodeState, Wheel_RPMS, RobotRadius, ObsClearance
     return NewNodeStates
 
 ##---------------------------------Defining my Cost and NewNodeState Function--------------------------------------##
-''' Though this project is not necessarily action based planning, I need to limit the graph generation based
+''' Though this project is NOT action based planning, I need to limit the graph generation based
 off of differential drive constraints. Thus, I reuse this from the previous project.'''
 
 def CalcMoveWithCost(CurrentNodeState, WheelAction, RobotRadius, ObsClearance, WheelRad, WheelDist):
@@ -328,7 +366,7 @@ def PlotBranch(ParentNodeState, WheelAction, WheelRad, WheelDist, Color, RobotRa
     New_Node_Y = Curr_Node_Y
     New_Node_Theta = Curr_Node_Theta
 
-    while t < 1:
+    while t < 1.5:
         t += dt
         X_Start = New_Node_X
         Y_Start = New_Node_Y
@@ -442,26 +480,37 @@ random_point_list.append([0,0])
 
 iteration = 0
 
+ChangeX = 0.5*WheelRadius*(2*np.max(WheelRPMS))*np.cos(45)
+ChangeY = 0.5*WheelRadius*(2*np.max(WheelRPMS))*np.sin(45)
+PPRO_Radius = np.sqrt(ChangeX**2 + ChangeY**2)
+
 starttime = timeit.default_timer() #Start the Timer when serch starts
 print("PPRO RRT Starting!!!!")
+Nearest2Goal = Init_Node
 
 while not Check_Goal:
-    Rand_Point = GenerateRandomPoint()
-    random_point_list.append(Rand_Point)
-    WSColoring(arena, Rand_Point, (255,0,0)) #Plot Initial State
-    Tree_Idx, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Rand_Point)
-    print("\nRandom Point:", Rand_Point, "Nearest Tree State:", NearestTreeNode.ReturnState())
-    Closest_Action_State, Info = GenerateBranch(NearestTreeNode, Rand_Point, Tree_Idx, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance)
+    RandomPoints = GenerateRandomPoints(Nearest2Goal.ReturnState()[0], Nearest2Goal.ReturnState()[1], PPRO_Radius)
+    Nearest_Rando_2_Goal, Rando_IDX = FindNearest2Goal(RandomPoints, GoalState)
+
+    Tree_IDX, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Nearest_Rando_2_Goal)
+    Closest_Action_State, Info = GenerateBranch(Nearest2Goal, Nearest_Rando_2_Goal, Tree_IDX, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance)
     if not Closest_Action_State:
         continue
     else:
-        NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_Idx])
+        NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_IDX])
         print("\nNewest Branch State:", NewBranch.ReturnState())
         PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
         Explored_Tree.append(NewBranch)
         Wheel_CMD_List.append(Info[2])
+        random_point_list.append(Nearest_Rando_2_Goal)
+        Nearest2GoalSTATE, _ = FindNearestTree2Goal(Explored_Tree, GoalState)
+        
+        if EuclidDist(Nearest2GoalSTATE, GoalState) < EuclidDist(Nearest2Goal.ReturnState(),GoalState):
+            Nearest2Goal = Node(Nearest2GoalSTATE, Explored_Tree[Tree_IDX])
+
         Check_Goal = CompareToGoal(NewBranch.ReturnState(), GoalState, ErrorThresh)
         iteration += 1
+
 
     if iteration > MaxIterations:
         print("Iteration Limit Reached!")

@@ -29,6 +29,10 @@ Adam: https://github.com/AdazInventionz/ENPM-661-Project-5
 
 # Libraries Used
 
+# How to Run Code: 2-D Visualization
+
+# How to Run Code: 3-D Visualization
+
 
 
 
