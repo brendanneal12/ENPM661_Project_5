@@ -31,7 +31,6 @@ Adam: https://github.com/AdazInventionz/ENPM-661-Project-5
 
 # How to Run Code: 2-D Visualization
 
-# How to Run Code: 3-D Visualization
 
 
 

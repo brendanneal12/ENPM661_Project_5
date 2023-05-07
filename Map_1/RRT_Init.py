@@ -5,7 +5,6 @@
 import cv2 as cv
 import numpy as np
 import timeit
-import sys
 import math
 from matplotlib import pyplot as plt
 import random
@@ -26,7 +25,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkClearance(x, y, s, r):
-                arena[y, x] = darkGray
+                arena[399 - y, x] = darkGray
     
     #Draw Obstacle Borders
     for x in range(0, 500):
@@ -34,7 +33,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkBorder(x, y, s):
-                arena[y, x] = gray
+                arena[399 - y, x] = gray
     
     #Draw Obstacles
     for x in range(0, 500):
@@ -42,7 +41,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkObstacle(x, y):
-                arena[y, x] = white
+                arena[399 - y, x] = white
                 
 #Checks to see if a point is within an obstacle
 def checkObstacle(x, y):
@@ -179,13 +178,13 @@ def checkClearance(x, y, s, r):
 #Checks to see if a point is valid (by checking obstacle, border, and clearance, as well as making sure the point is within arena bounds)
 def checkValid(x, y, s, r):
     
-    if checkObstacle(x, y):
+    if checkObstacle(x, 399 - y):
         return False
     
-    if checkBorder(x, y, s):
+    if checkBorder(x, 399 - y, s):
         return False
     
-    if checkClearance(x, y, s, r):
+    if checkClearance(x, 399 - y, s, r):
         return False
     
     if (x < 0 or x >= 500 or y < 0 or y >= 400):
@@ -210,6 +209,19 @@ class Node:
         if self.ReturnParent() is None:
             return None
         return self.ReturnParent().ReturnState()
+    
+        ##--------------BACKTRACKING FUNCTION Integrated into Class--------##
+    def ReturnPath(self):
+        NodePath = [] #Initialize the Node Path
+        CurrentNode = self
+        #while(CurrentNode.ReturnMove() is not None): #For move that a Node has made
+        while(CurrentNode.ReturnParent() is not None):
+            NodePath.append(CurrentNode) #Append Node to Path
+            CurrentNode = CurrentNode.ReturnParent() #Backtrack to the Parent before repeating Process
+        NodePath.append(CurrentNode) #Append the starting point after path is derived.
+        NodePath.reverse() #Reverse Order to get front to back path
+
+        return NodePath
 
 
 def GenerateRandomPoint():
@@ -308,7 +320,7 @@ def CalcMoveWithCost(CurrentNodeState, WheelAction, RobotRadius, ObsClearance, W
 def GenerateBranch(Closest_Node, RandomPoint, Closest_Idx, Wheel_RPMS, RobotRadius, ObsClearance, WheelRad, WheelDist):
     ActionStateInfo = ReturnPossibleStates(Closest_Node.ReturnState(), Wheel_RPMS, RobotRadius, ObsClearance, WheelRad, WheelDist)
     ActionStateList = [sub_array[0] for sub_array in ActionStateInfo]
-    print("\nPossible Action States:\n", ActionStateList)
+    #print("\nPossible Action States:\n", ActionStateList)
     if ActionStateList:
         Closest_State, Closest_Idx = FindNearestState(ActionStateList, RandomPoint)
         Full_Info = ActionStateInfo[Closest_Idx]
@@ -401,7 +413,7 @@ WheelDistance = 35.4 #cm
 MaxIterations = 1000
 
 ##---------------------Thresholds---------------------##
-ErrorThresh = 3
+ErrorThresh = 10
 
 ##----------------------Arena Setup-------------------##
 
@@ -464,6 +476,10 @@ while not Check_Goal:
         Check_Goal = CompareToGoal(NewBranch.ReturnState(), GoalState, ErrorThresh)
         iteration += 1
 
+    if Check_Goal:
+        Path = NewBranch.ReturnPath() #BackTrack to find path.
+        print("Goal Found!")
+
     if iteration > MaxIterations:
         print("Iteration Limit Reached!")
         break
@@ -483,13 +499,12 @@ for idx, node in enumerate(Explored_Tree): #Plots the search area
     curr_node_state = node.ReturnState()
     parent_node_state = node.ReturnParentState()
     plt.plot(random_point_list[idx][0], random_point_list[idx][1], 'y+')
-    plt.pause(1)
-
+    plt.pause(0.1)
 
     PlotBranch(node.ReturnParentState(), Wheel_CMD_List[idx], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
-    plt.pause(1)
-    
+    plt.pause(0.1)
+
 plt.show()
-plt.close()
+
 
 

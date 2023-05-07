@@ -80,7 +80,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkClearance(x, y, s, r):
-                arena[y, x] = darkGray
+                arena[399 - y, x] = darkGray
     
     #Draw Obstacle Borders
     for x in range(0, 500):
@@ -88,7 +88,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkBorder(x, y, s):
-                arena[y, x] = gray
+                arena[399 - y, x] = gray
     
     #Draw Obstacles
     for x in range(0, 500):
@@ -96,7 +96,7 @@ def setup(s, r):
         for y in range(0, 400):
         
             if checkObstacle(x, y):
-                arena[y, x] = white
+                arena[399 - y, x] = white
                 
 #Checks to see if a point is within an obstacle
 def checkObstacle(x, y):
@@ -233,16 +233,16 @@ def checkClearance(x, y, s, r):
 #Checks to see if a point is valid (by checking obstacle, border, and clearance, as well as making sure the point is within arena bounds)
 def checkValid(x, y, s, r):
     
-    if checkObstacle(x, y):
+    if checkObstacle(x, 399 - y):
         return False
     
-    if checkBorder(x, y, s):
+    if checkBorder(x, 399 - y, s):
         return False
     
-    if checkClearance(x, y, s, r):
+    if checkClearance(x, 399 - y, s, r):
         return False
     
-    if (x < 0 or x >= 500 or y < 0 or y >= 400):
+    if (x < 0 or x >= 499 or y < 0 or y >= 399):
         return False
     
     return True
