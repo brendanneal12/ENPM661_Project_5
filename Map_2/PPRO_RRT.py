@@ -10,7 +10,6 @@ from matplotlib import pyplot as plt
 import random
 ##=====================================================Map Setup=============================================================##
 #Sets up arena with obstacles
-#Sets up arena with obstacles
 def setup(s, r):
 
     global arena
@@ -115,16 +114,16 @@ def checkClearance(x, y, s, r):
 #Checks to see if a point is valid (by checking obstacle, border, and clearance, as well as making sure the point is within arena bounds)
 def checkValid(x, y, s, r):
     
-    if checkObstacle(x, 399 - y):
+    if checkObstacle(x, y):
         return False
     
-    if checkBorder(x, 399 - y, s):
+    if checkBorder(x, y, s):
         return False
     
-    if checkClearance(x, 399 - y, s, r):
+    if checkClearance(x, y, s, r):
         return False
     
-    if (x < 0 or x >= 600 or y < 0 or y >= 200):
+    if (x < 0 + s + r or x >= 600 - s - r or y < 0 + s + r or y >= 200 -s - r): #Accounting for Robot size and Clearance on Borders.
         return False
     
     return True
@@ -155,19 +154,32 @@ def GenerateRandomPoint():
 
     return Point
 
+# def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
+#     RandPoints = []
+#     while len(RandPoints) < 5:
+#         angle = random.uniform(0, math.pi)
+#         X = CentX + R*math.cos(angle)
+#         Y = CentY + R*math.sin(angle)
+#         if checkValid(X, Y, RobotRadius, DesClearance):
+#             RandPoints.append([int(X),int(Y)])
+#         else:
+#             continue
+
+#     return RandPoints
+
+## Generates Random Points based on circle of Bias
 def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
     RandPoints = []
-    while len(RandPoints) < 5:
+    while len(RandPoints) < 4:
         angle = random.uniform(0, math.pi)
         X = CentX + R*math.cos(angle)
         Y = CentY + R*math.sin(angle)
-        if checkValid(X, Y, RobotRadius, DesClearance):
-            RandPoints.append([int(X),int(Y)])
-        else:
-            continue
+        RandPoints.append([int(X),int(Y)])
+
 
     return RandPoints
 
+#Finds the nearest action that leads you to the random point.
 def FindNearestTreePoint(NodeList, RandomPoint):
     min_dist = math.inf
     for idx, node in enumerate(NodeList):
@@ -180,6 +192,7 @@ def FindNearestTreePoint(NodeList, RandomPoint):
 
     return closest_node_idx, closest_node
 
+#Finds the nearest action that leads you to the random point.
 def FindNearestState(NewStateList, RandomPoint):
     min_dist = math.inf
     for idx, state in enumerate(NewStateList):
@@ -191,6 +204,7 @@ def FindNearestState(NewStateList, RandomPoint):
 
     return closest_state, closest_state_idx
 
+#Finds the nearest tree point to the goal.
 def FindNearest2Goal(Tree, GoalPoint):
     min_dist = math.inf
     for idx, state in enumerate(Tree):
@@ -202,6 +216,7 @@ def FindNearest2Goal(Tree, GoalPoint):
 
     return closest_state_2_goal, closest_state_2_goal_idx
 
+#Finds the nearest tree point to the goal.
 def FindNearestTree2Goal(Tree, GoalPoint):
     min_dist = math.inf
     for idx, node in enumerate(Tree):
@@ -214,6 +229,7 @@ def FindNearestTree2Goal(Tree, GoalPoint):
 
     return closest_state_2_goal, closest_state_2_goal_idx
 
+#Returns Euclidian Distance in ancestor calculations
 def EuclidDist(State1,GoalState):
     dist = np.sqrt((State1[0]-GoalState[1])**2 + (State1[1] - GoalState[1])**2)
     return dist
@@ -321,7 +337,7 @@ def PlotBranch(ParentNodeState, WheelAction, WheelRad, WheelDist, Color, RobotRa
         if checkValid(New_Node_X, New_Node_Y, ObsClearance, RobotRadius) == True:
             plt.plot([X_Start, New_Node_X], [Y_Start, New_Node_Y], color = Color, linewidth = 0.75)
 
-
+# Defining my compare to goal fxn.
 def CompareToGoal(Current_Node_Position, Goal_Node_Position, ErrorThreshold):
     Dist2Goal = (Goal_Node_Position[0] - Current_Node_Position[0])**2 + (Goal_Node_Position[1] - Current_Node_Position[1])**2 #Euclidian Distance
     if Dist2Goal < ErrorThreshold**2: #Error less than threshold PLUS the angle has to be equal
@@ -405,10 +421,12 @@ plt.imshow(arena, origin='lower') #Show Initial Arena Setup
 plt.show()
 
 
+#Initialization
 Check_Goal = False
 Init_Node_Temp = Node(InitState, None)
 Init_Node = Node(InitState, Init_Node_Temp)
 
+#Init Lists for Plotting
 Wheel_CMD_List = []
 Explored_Tree = []
 random_point_list = []
@@ -425,32 +443,32 @@ PPRO_Radius = np.sqrt(ChangeX**2 + ChangeY**2)
 ErrorThresh = PPRO_Radius
 
 
-
+#Start Algorithm
 starttime = timeit.default_timer() #Start the Timer when serch starts
 print("PPRO RRT Starting!!!!")
 Nearest2Goal = Init_Node
 
 while iteration < MaxIterations:
     print("The Nearest State to Goal is:", Nearest2Goal.ReturnState())
-    RandomPoints = GenerateRandomPoints(Nearest2Goal.ReturnState()[0], Nearest2Goal.ReturnState()[1], PPRO_Radius, RobotRadius, DesClearance)
-    Nearest_Rando_2_Goal, Rando_IDX = FindNearest2Goal(RandomPoints, GoalState)
-    Tree_IDX, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Nearest_Rando_2_Goal)
-    Closest_Action_State, Info = GenerateBranch(Nearest2Goal, Nearest_Rando_2_Goal, Tree_IDX, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance)
+    RandomPoints = GenerateRandomPoints(Nearest2Goal.ReturnState()[0], Nearest2Goal.ReturnState()[1], PPRO_Radius, RobotRadius, DesClearance) #Generate Random Points
+    Nearest_Rando_2_Goal, Rando_IDX = FindNearest2Goal(RandomPoints, GoalState) #Find Nearest Random Point to Goal
+    Tree_IDX, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Nearest_Rando_2_Goal) #Find Nearest Tree Point to Random
+    Closest_Action_State, Info = GenerateBranch(Nearest2Goal, Nearest_Rando_2_Goal, Tree_IDX, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance) #Generate Action that takes you closest to random point
 
-    if Closest_Action_State:
-        NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_IDX])
-        Explored_Tree.append(NewBranch)
+    if Closest_Action_State: #If a valid action exists
+        NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_IDX]) #Generate Branch
+        Explored_Tree.append(NewBranch) #Add for Plotting
         Wheel_CMD_List.append(Info[2])
         random_point_list.append(Nearest_Rando_2_Goal)
 
-        Nearest2GoalSTATE, _ = FindNearestTree2Goal(Explored_Tree, GoalState)
+        Nearest2GoalSTATE, _ = FindNearestTree2Goal(Explored_Tree, GoalState) #Find new Nearest2Goal State
         Ancestor1 = Nearest2Goal.ReturnParent()
         Ancestor2 = Nearest2Goal.ReturnParent()
-        Ancestor1_Dist = EuclidDist(Ancestor1.ReturnState(), GoalState)
+        Ancestor1_Dist = EuclidDist(Ancestor1.ReturnState(), GoalState) #Calculate Ancestor Information
         Ancestor2_Dist = EuclidDist(Ancestor2.ReturnState(), GoalState)
-        Nearest2Goal = Node(Nearest2GoalSTATE, Explored_Tree[Tree_IDX])
+        Nearest2Goal = Node(Nearest2GoalSTATE, Explored_Tree[Tree_IDX]) #Update "Nearest Node to Goal"
 
-
+        #Compare to Goal
         Check_Goal = CompareToGoal(Nearest2Goal.ReturnState(), GoalState, ErrorThresh)
         if Check_Goal:
             print("Goal Reached!")
@@ -468,7 +486,7 @@ while iteration < MaxIterations:
 stoptime = timeit.default_timer() #Stop the Timer, as Searching is complete.
 print("That took", stoptime - starttime, "seconds to complete")
 
-
+##-------------Visualize---------------_##
 print("Visualization Starting!")
 plt.plot(InitState[0], InitState[1], 'go', markersize = 0.5) #plot init state
 plt.imshow(arena, origin = 'lower')

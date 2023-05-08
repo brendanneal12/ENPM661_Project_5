@@ -114,16 +114,16 @@ def checkClearance(x, y, s, r):
 #Checks to see if a point is valid (by checking obstacle, border, and clearance, as well as making sure the point is within arena bounds)
 def checkValid(x, y, s, r):
     
-    if checkObstacle(x, 399 - y):
+    if checkObstacle(x, y):
         return False
     
-    if checkBorder(x, 399 - y, s):
+    if checkBorder(x, y, s):
         return False
     
-    if checkClearance(x, 399 - y, s, r):
+    if checkClearance(x, y, s, r):
         return False
     
-    if (x < 0 or x >= 600 or y < 0 or y >= 200):
+    if (x < 0 + s + r or x >= 600 - s - r or y < 0 + s + r or y >= 200 -s - r): #Accounting for Robot size and Clearance on Borders.
         return False
     
     return True
@@ -154,16 +154,27 @@ def GenerateRandomPoint():
 
     return Point
 
+# def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
+#     RandPoints = []
+#     while len(RandPoints) < 5:
+#         angle = random.uniform(0, math.pi)
+#         X = CentX + R*math.cos(angle)
+#         Y = CentY + R*math.sin(angle)
+#         if checkValid(X, Y, RobotRadius, DesClearance):
+#             RandPoints.append([int(X),int(Y)])
+#         else:
+#             continue
+
+#     return RandPoints
+
 def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
     RandPoints = []
-    while len(RandPoints) < 5:
+    while len(RandPoints) < 4:
         angle = random.uniform(0, math.pi)
         X = CentX + R*math.cos(angle)
         Y = CentY + R*math.sin(angle)
-        if checkValid(X, Y, RobotRadius, DesClearance):
-            RandPoints.append([int(X),int(Y)])
-        else:
-            continue
+        RandPoints.append([int(X),int(Y)])
+
 
     return RandPoints
 
@@ -423,8 +434,6 @@ ChangeY = 0.5*WheelRadius*(2*np.max(WheelRPMS))*np.sin(45)
 PPRO_Radius = np.sqrt(ChangeX**2 + ChangeY**2)
 ErrorThresh = PPRO_Radius
 
-
-
 starttime = timeit.default_timer() #Start the Timer when serch starts
 print("PPRO RRT Starting!!!!")
 Nearest2Goal = Init_Node
@@ -439,7 +448,7 @@ while iteration < MaxIterations:
     if Closest_Action_State:
         NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_IDX])
         #print("\nNewest Branch State:", NewBranch.ReturnState())
-        #PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
+        PlotBranch(NewBranch.ReturnParentState(), Info[2], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
         Explored_Tree.append(NewBranch)
         Wheel_CMD_List.append(Info[2])
         random_point_list.append(Nearest_Rando_2_Goal)
@@ -448,6 +457,7 @@ while iteration < MaxIterations:
 
         #if EuclidDist(Nearest2GoalSTATE, GoalState) < EuclidDist(Nearest2Goal.ReturnState(),GoalState):
         Nearest2Goal = Node(Nearest2GoalSTATE, Explored_Tree[Tree_IDX])
+        print(Nearest2Goal.ReturnState())
 
         Check_Goal = CompareToGoal(Nearest2Goal.ReturnState(), GoalState, ErrorThresh)
         if Check_Goal:
@@ -467,8 +477,8 @@ while iteration < MaxIterations:
 stoptime = timeit.default_timer() #Stop the Timer, as Searching is complete.
 print("That took", stoptime - starttime, "seconds to complete")
 
-# plt.imshow(arena, origin= 'lower')
-# plt.show()
+plt.imshow(arena, origin= 'lower')
+plt.show()
 
 
 print("Visualization Starting!")
@@ -479,11 +489,11 @@ for idx, node in enumerate(Explored_Tree): #Plots the search area
     curr_node_state = node.ReturnState()
     parent_node_state = node.ReturnParentState()
     plt.plot(random_point_list[idx][0], random_point_list[idx][1], 'y+')
-    plt.pause(1)
+    plt.pause(0.01)
 
 
     PlotBranch(node.ReturnParentState(), Wheel_CMD_List[idx], WheelRadius, WheelDistance, 'g', RobotRadius, DesClearance)
-    plt.pause(1)
+    plt.pause(0.01)
     
 plt.show()
 plt.close()

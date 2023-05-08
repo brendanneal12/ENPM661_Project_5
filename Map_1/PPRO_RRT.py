@@ -218,6 +218,7 @@ def GenerateRandomPoint():
 
     return Point
 
+## Generates random points based on Circle of Bias
 def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
     RandPoints = []
     while len(RandPoints) < 5:
@@ -231,6 +232,19 @@ def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
 
     return RandPoints
 
+# def GenerateRandomPoints(CentX, CentY, R, RobotRadius, DesClearance):
+#     RandPoints = []
+#     while len(RandPoints) < 4:
+#         angle = random.uniform(0, math.pi)
+#         X = CentX + R*math.cos(angle)
+#         Y = CentY + R*math.sin(angle)
+#         RandPoints.append([int(X),int(Y)])
+
+
+#     return RandPoints
+
+
+## Finds nearest point on the tree to a randomly generated point
 def FindNearestTreePoint(NodeList, RandomPoint):
     min_dist = math.inf
     for idx, node in enumerate(NodeList):
@@ -243,6 +257,7 @@ def FindNearestTreePoint(NodeList, RandomPoint):
 
     return closest_node_idx, closest_node
 
+#Finds the nearest action that leads you to the random point.
 def FindNearestState(NewStateList, RandomPoint):
     min_dist = math.inf
     for idx, state in enumerate(NewStateList):
@@ -254,6 +269,7 @@ def FindNearestState(NewStateList, RandomPoint):
 
     return closest_state, closest_state_idx
 
+#Finds the nearest tree point to the goal.
 def FindNearest2Goal(Tree, GoalPoint):
     min_dist = math.inf
     for idx, state in enumerate(Tree):
@@ -265,6 +281,7 @@ def FindNearest2Goal(Tree, GoalPoint):
 
     return closest_state_2_goal, closest_state_2_goal_idx
 
+#Finds the nearest tree point to the goal.
 def FindNearestTree2Goal(Tree, GoalPoint):
     min_dist = math.inf
     for idx, node in enumerate(Tree):
@@ -277,6 +294,7 @@ def FindNearestTree2Goal(Tree, GoalPoint):
 
     return closest_state_2_goal, closest_state_2_goal_idx
 
+#Returns Euclidian Distance in ancestor calculations
 def EuclidDist(State1,GoalState):
     dist = np.sqrt((State1[0]-GoalState[1])**2 + (State1[1] - GoalState[1])**2)
     return dist
@@ -385,6 +403,7 @@ def PlotBranch(ParentNodeState, WheelAction, WheelRad, WheelDist, Color, RobotRa
             plt.plot([X_Start, New_Node_X], [Y_Start, New_Node_Y], color = Color, linewidth = 0.75)
 
 
+# Defining my compare to goal fxn.
 def CompareToGoal(Current_Node_Position, Goal_Node_Position, ErrorThreshold):
     Dist2Goal = (Goal_Node_Position[0] - Current_Node_Position[0])**2 + (Goal_Node_Position[1] - Current_Node_Position[1])**2 #Euclidian Distance
     if Dist2Goal < ErrorThreshold**2: #Error less than threshold PLUS the angle has to be equal
@@ -467,11 +486,12 @@ WSColoring(arena, GoalState, (0,255,0)) #Plot Goal State
 plt.imshow(arena, origin='lower') #Show Initial Arena Setup
 plt.show()
 
-
+#Initialization
 Check_Goal = False
 Init_Node_Temp = Node(InitState, None)
 Init_Node = Node(InitState, Init_Node_Temp)
 
+#Init Lists for Plotting
 Wheel_CMD_List = []
 Explored_Tree = []
 random_point_list = []
@@ -488,32 +508,32 @@ PPRO_Radius = np.sqrt(ChangeX**2 + ChangeY**2)
 ErrorThresh = PPRO_Radius
 
 
-
+#Start Algorithm
 starttime = timeit.default_timer() #Start the Timer when serch starts
 print("PPRO RRT Starting!!!!")
 Nearest2Goal = Init_Node
 
 while iteration < MaxIterations:
     print("The Nearest State to Goal is:", Nearest2Goal.ReturnState())
-    RandomPoints = GenerateRandomPoints(Nearest2Goal.ReturnState()[0], Nearest2Goal.ReturnState()[1], PPRO_Radius, RobotRadius, DesClearance)
-    Nearest_Rando_2_Goal, Rando_IDX = FindNearest2Goal(RandomPoints, GoalState)
-    Tree_IDX, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Nearest_Rando_2_Goal)
-    Closest_Action_State, Info = GenerateBranch(Nearest2Goal, Nearest_Rando_2_Goal, Tree_IDX, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance)
+    RandomPoints = GenerateRandomPoints(Nearest2Goal.ReturnState()[0], Nearest2Goal.ReturnState()[1], PPRO_Radius, RobotRadius, DesClearance) #Generate Random Points based on Circle of Bias
+    Nearest_Rando_2_Goal, Rando_IDX = FindNearest2Goal(RandomPoints, GoalState) #Find nearest random point to goal
+    Tree_IDX, NearestTreeNode = FindNearestTreePoint(Explored_Tree, Nearest_Rando_2_Goal) #Find nearest tree point to random 
+    Closest_Action_State, Info = GenerateBranch(Nearest2Goal, Nearest_Rando_2_Goal, Tree_IDX, WheelRPMS, RobotRadius, DesClearance, WheelRadius, WheelDistance) #Generate Action that takes you closest to random point
 
-    if Closest_Action_State:
-        NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_IDX])
-        Explored_Tree.append(NewBranch)
+    if Closest_Action_State: #If a valid action exists
+        NewBranch = Node(Closest_Action_State, Explored_Tree[Tree_IDX]) #Generate a New Branch
+        Explored_Tree.append(NewBranch) #Add for Plotting
         Wheel_CMD_List.append(Info[2])
         random_point_list.append(Nearest_Rando_2_Goal)
 
-        Nearest2GoalSTATE, _ = FindNearestTree2Goal(Explored_Tree, GoalState)
+        Nearest2GoalSTATE, _ = FindNearestTree2Goal(Explored_Tree, GoalState) #Find New Nearest2Goal Branch Point
         Ancestor1 = Nearest2Goal.ReturnParent()
         Ancestor2 = Nearest2Goal.ReturnParent()
-        Ancestor1_Dist = EuclidDist(Ancestor1.ReturnState(), GoalState)
+        Ancestor1_Dist = EuclidDist(Ancestor1.ReturnState(), GoalState) #Calculate Ancestor Information
         Ancestor2_Dist = EuclidDist(Ancestor2.ReturnState(), GoalState)
-        Nearest2Goal = Node(Nearest2GoalSTATE, Explored_Tree[Tree_IDX])
+        Nearest2Goal = Node(Nearest2GoalSTATE, Explored_Tree[Tree_IDX]) #Update "Nearest Node to Goal"
 
-
+        #Compare to Goal
         Check_Goal = CompareToGoal(Nearest2Goal.ReturnState(), GoalState, ErrorThresh)
         if Check_Goal:
             print("Goal Reached!")
@@ -532,6 +552,8 @@ stoptime = timeit.default_timer() #Stop the Timer, as Searching is complete.
 print("That took", stoptime - starttime, "seconds to complete")
 
 
+
+##--------------Visualize--------------##
 print("Visualization Starting!")
 plt.plot(InitState[0], InitState[1], 'go', markersize = 0.5) #plot init state
 plt.imshow(arena, origin = 'lower')
