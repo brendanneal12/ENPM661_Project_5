@@ -33,7 +33,7 @@ opencv, numpy, timeit, from matplotlib: pyplot, math, random
 # Files:
 Map1/PPRO_RRT.py
 Map2/PPRO_RRT.py
-Blank/PPRO_RRT.py
+Blank/BlankMapTesting_PPRO_RRT.py
 
 # Important Notes Please Read:
 1. If you have not read the report yet, I highly suggest you do, as the findings from this project state that more research and work has to be done to make this path planning algorithm work with a differential drive robot.
